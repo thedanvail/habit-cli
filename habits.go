@@ -1352,7 +1352,7 @@ func commandUndone(df *DataFile) {
 	// New implementation: show all habits not completed today (like the current "remind" command)
 	needsReminder := checkReminders(df)
 	if len(needsReminder) > 0 {
-		fmt.Println("Habits completed today that you can mark as not done:")
+		fmt.Println("Habits not yet completed today:")
 		for i, name := range needsReminder {
 			fmt.Printf("  \033[1m%d.\033[0m %s\n", i+1, name)
 		}
