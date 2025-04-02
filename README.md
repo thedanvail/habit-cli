@@ -2,6 +2,20 @@
 
 A simple command-line habit tracker that helps you build and maintain daily habits.
 
+## Screenshots
+
+### Habit Tracker View
+
+![Habit Tracker View](assets/images/tracker-view.png)
+
+### Habit List
+
+![Habit List](assets/images/habit-list.png)
+
+### Monthly Statistics
+
+![Monthly Statistics](assets/images/monthly-view.png)
+
 ## Features
 
 - Track multiple habits from the command line

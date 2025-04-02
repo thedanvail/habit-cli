@@ -56,4 +56,11 @@ habits_export_*.json
 
 # Debug files
 debug
-__debug_bin 
+__debug_bin
+
+# Do NOT ignore image assets
+!assets/images/
+!assets/images/*.png
+!assets/images/*.jpg
+!assets/images/*.jpeg
+!assets/images/*.gif 
