@@ -47,6 +47,7 @@ test_*.json
 test_habits_data.json
 test_export_for_test.json
 habits_export_*.json
+seed_data.json
 
 # Backup files
 *~
