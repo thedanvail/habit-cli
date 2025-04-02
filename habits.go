@@ -381,7 +381,7 @@ func getTerminalWidth() int {
 
 // ANSI color codes (using 16-color background for better compatibility)
 const ( // Background colors
-	colorDone  = "\033[48;5;34m"  // Green for completed habits (single view)
+	colorDone  = "\033[48;5;22m"  // Dark green for completed habits (same as single habit in aggregate)
 	colorCode1 = "\033[48;5;22m"  // Very dark green for 1 habit (aggregate view)
 	colorCode2 = "\033[48;5;35m"  // Medium vibrant green for 2 habits (aggregate view)
 	colorCode3 = "\033[48;5;118m" // Bright neon green for 3+ habits (aggregate view)
