@@ -9,6 +9,11 @@ A simple command-line habit tracker that helps you build and maintain daily habi
 ![Month Grid View](assets/images/month-grid.png)
 *Monthly view of all habit completions*
 
+### 30-Day Tracker View
+
+![30-Day Tracker](assets/images/thirty-day-view.png)
+*Last 30 days of habit tracking*
+
 ### Habit List
 
 ![Habit List](assets/images/habit-list.png)
@@ -23,6 +28,11 @@ A simple command-line habit tracker that helps you build and maintain daily habi
 
 ![Statistics View](assets/images/stats-view.png)
 *Completion statistics and streaks*
+
+### Undone Habits View
+
+![Undone Habits](assets/images/undone-view.png)
+*Habits remaining to be completed today*
 
 ### Command Help
 
