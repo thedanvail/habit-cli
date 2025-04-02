@@ -424,11 +424,13 @@ func commandDelete(args []string, df *DataFile) {
 	resp = strings.TrimSpace(strings.ToLower(resp))
 	if resp == "y" || resp == "yes" {
 		if index >= 0 && index < len(df.Habits) {
+			// Save the habit name before deletion
+			habitName := habit.Name
 			df.Habits = append(df.Habits[:index], df.Habits[index+1:]...)
 			if err := saveData(df); err != nil {
 				fmt.Println("Error saving data:", err)
 			} else {
-				fmt.Printf("Habit '%s' deleted.\n", habit.Name)
+				fmt.Printf("Habit '%s' deleted.\n", habitName)
 			}
 		} else {
 			// This should technically not happen if findHabit returned a non-nil habit
