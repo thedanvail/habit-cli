@@ -1586,7 +1586,7 @@ func printHelp() {
 	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "habits done 1", resetText, "Mark habit #1 as done for today.")
 	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "habits tracker 2 -r month", resetText, "View month tracker for habit #2.")
 	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "habits stats", resetText, "Show statistics for all habits.")
-	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "habits export --file backup.json", resetText, "Export your habit data.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "habits export -f backup.json", resetText, "Export your habit data.")
 }
 
 // showTrackerWithoutClearing shows the tracker but doesn't clear the screen
