@@ -382,9 +382,9 @@ func getTerminalWidth() int {
 // ANSI color codes (using 16-color background for better compatibility)
 const ( // Background colors
 	colorDone  = "\033[48;5;34m"  // Green for completed habits (single view)
-	colorCode1 = "\033[48;5;22m"  // Dark Green for 1 habit (aggregate view)
-	colorCode2 = "\033[48;5;34m"  // Medium Green for 2 habits (aggregate view)
-	colorCode3 = "\033[48;5;46m"  // Bright Green for 3+ habits (aggregate view)
+	colorCode1 = "\033[48;5;22m"  // Very dark green for 1 habit (aggregate view)
+	colorCode2 = "\033[48;5;35m"  // Medium vibrant green for 2 habits (aggregate view)
+	colorCode3 = "\033[48;5;118m" // Bright neon green for 3+ habits (aggregate view)
 	colorEmpty = "\033[48;5;240m" // Grey for empty boxes (days with 0 habits)
 	colorReset = "\033[0m"
 	squareChar     = "  " // Two spaces for the square content
@@ -794,6 +794,27 @@ func checkReminders(df *DataFile) []string {
 		}
 		if !isDoneToday {
 			needsReminder = append(needsReminder, h.Name)
+		}
+	}
+
+	return needsReminder
+}
+
+// New function that returns habit indices and names
+func checkRemindersWithIndices(df *DataFile) [][2]string {
+	today := time.Now().Format("2006-01-02")
+	needsReminder := [][2]string{}
+	for i, h := range df.Habits {
+		isDoneToday := false
+		for _, d := range h.DatesTracked {
+			if d == today {
+				isDoneToday = true
+				break
+			}
+		}
+		if !isDoneToday {
+			// Store both the index (1-based) and name
+			needsReminder = append(needsReminder, [2]string{strconv.Itoa(i+1), h.Name})
 		}
 	}
 
@@ -1349,12 +1370,13 @@ func commandImport(args []string, df *DataFile) {
 }
 
 func commandUndone(df *DataFile) {
-	// New implementation: show all habits not completed today (like the current "remind" command)
-	needsReminder := checkReminders(df)
+	// Use the new function that preserves indices
+	needsReminder := checkRemindersWithIndices(df)
 	if len(needsReminder) > 0 {
 		fmt.Println("Habits not yet completed today:")
-		for i, name := range needsReminder {
-			fmt.Printf("  \033[1m%d.\033[0m %s\n", i+1, name)
+		for _, habit := range needsReminder {
+			index, name := habit[0], habit[1]
+			fmt.Printf("  \033[1m%s.\033[0m %s\n", index, name)
 		}
 		fmt.Println()
 	} else if len(df.Habits) == 0 {
