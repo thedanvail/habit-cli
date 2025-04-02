@@ -32,7 +32,7 @@ A simple command-line habit tracker that helps you build and maintain daily habi
 ### Undone Habits View
 
 ![Undone Habits](assets/images/undone-view.png)
-*Habits remaining to be completed today*
+*List of habits not yet completed today*
 
 ### Command Help
 

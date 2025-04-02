@@ -382,9 +382,9 @@ func getTerminalWidth() int {
 // ANSI color codes (using 16-color background for better compatibility)
 const ( // Background colors
 	colorDone  = "\033[48;5;34m"  // Green for completed habits (single view)
-	colorCode1 = "\033[48;5;28m"  // Light Green for 1 habit (aggregate view)
-	colorCode2 = "\033[48;5;34m"  // Green for 2 habits (aggregate view)
-	colorCode3 = "\033[48;5;40m"  // Bright Green for 3+ habits (aggregate view)
+	colorCode1 = "\033[48;5;22m"  // Dark Green for 1 habit (aggregate view)
+	colorCode2 = "\033[48;5;34m"  // Medium Green for 2 habits (aggregate view)
+	colorCode3 = "\033[48;5;46m"  // Bright Green for 3+ habits (aggregate view)
 	colorEmpty = "\033[48;5;240m" // Grey for empty boxes (days with 0 habits)
 	colorReset = "\033[0m"
 	squareChar     = "  " // Two spaces for the square content
