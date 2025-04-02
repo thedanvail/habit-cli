@@ -211,14 +211,14 @@ func findHabit(df *DataFile, identifier string) (*Habit, int) {
 func commandAdd(args []string, df *DataFile) {
 	habitName := strings.TrimSpace(strings.Join(args, " "))
 	if habitName == "" {
-		fmt.Println("Error: No habit name provided.")
-		fmt.Println("Usage: habits add \"Habit Name\"")
+		fmt.Println("\nError: No habit name provided.")
+		fmt.Println("Usage: habits add \"Habit Name\"\n")
 		return
 	}
 	// Check if habit name already exists
 	for _, h := range df.Habits {
 		if strings.EqualFold(h.Name, habitName) {
-			fmt.Printf("Error: Habit with name '%s' already exists.\n", habitName)
+			fmt.Printf("\nError: Habit with name '%s' already exists.\n\n", habitName)
 			return
 		}
 	}
@@ -232,17 +232,20 @@ func commandAdd(args []string, df *DataFile) {
 	}
 	df.Habits = append(df.Habits, newHabit)
 	if err := saveData(df); err != nil {
-		fmt.Println("Error saving data:", err)
+		fmt.Println("\nError saving data:", err, "\n")
 	} else {
-		fmt.Printf("Habit added: '%s'\n", habitName)
+		fmt.Printf("\nHabit added: '%s'\n\n", habitName)
 	}
 }
 
 func commandList(df *DataFile) {
 	if len(df.Habits) == 0 {
-		fmt.Println("No habits found. Add one using 'habits add \"My Habit\"'")
+		fmt.Println("\nNo habits found. Add one using 'habits add \"My Habit\"'\n")
 		return
 	}
+	
+	// Add extra spacing at the beginning
+	fmt.Println()
 	
 	// Replace boxed header with a left-aligned title
 	fmt.Printf("%s📋 Your Habits%s\n", boldText, resetText)
@@ -257,6 +260,8 @@ func commandList(df *DataFile) {
 		// Simple case: all habits fit on one page
 		fmt.Println()
 		displayHabitsPage(df.Habits, 0, habitsPerPage)
+		// Add extra spacing at the end
+		fmt.Println()
 	} else {
 		// Multiple pages case: implement pagination
 		reader := bufio.NewReader(os.Stdin)
@@ -282,6 +287,8 @@ func commandList(df *DataFile) {
 				reader.ReadString('\n')
 				currentPage++
 			} else {
+				// Add extra spacing before exiting
+				fmt.Println()
 				return
 			}
 			
@@ -289,6 +296,8 @@ func commandList(df *DataFile) {
 			if supportsColor {
 				fmt.Print(clearScreen) // Clear screen
 			}
+			// Add extra spacing at the beginning
+			fmt.Println()
 			fmt.Printf("%s📋 Your Habits%s\n", boldText, resetText)
 		}
 	}
@@ -305,12 +314,16 @@ func displayHabitsPage(habits []Habit, startIdx, endIdx int) {
 		h := habits[i]
 		fmt.Printf("  %s%d.%s %s (%s%s%s)\n", boldText, i+1, resetText, h.Name, italicText, h.ShortName, resetText)
 	}
+	// Add an extra line break at the end of the list
+	if endIdx > startIdx {
+		fmt.Println()
+	}
 }
 
 func commandDone(args []string, df *DataFile) {
 	if len(args) == 0 {
-		fmt.Println("Error: Specify which habit to mark as done.")
-		fmt.Println("Usage: habits done <index|name|short_name> [--date YYYY-MM-DD]")
+		fmt.Println("\nError: Specify which habit to mark as done.")
+		fmt.Println("Usage: habits done <index|name|short_name> [--date YYYY-MM-DD]\n")
 		return
 	}
 	
@@ -322,8 +335,9 @@ func commandDone(args []string, df *DataFile) {
 	
 	// Set usage message
 	doneCmd.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s done <index|name|short_name> [--date YYYY-MM-DD] or [-d YYYY-MM-DD]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\nUsage: %s done <index|name|short_name> [--date YYYY-MM-DD] or [-d YYYY-MM-DD]\n", os.Args[0])
 		doneCmd.PrintDefaults()
+		fmt.Fprintln(os.Stderr, "")
 	}
 	
 	// Get the habit identifier from the first argument
@@ -344,7 +358,7 @@ func commandDone(args []string, df *DataFile) {
 	targetHabit, _ := findHabit(df, identifier)
 	
 	if targetHabit == nil {
-		fmt.Printf("Error: No habit found matching '%s'. Use 'habits list' to see available habits.\n", identifier)
+		fmt.Printf("\nError: No habit found matching '%s'. Use 'habits list' to see available habits.\n\n", identifier)
 		checkReminders(df)
 		return
 	}
@@ -362,14 +376,14 @@ func commandDone(args []string, df *DataFile) {
 		var err error
 		targetDate, err = time.Parse("2006-01-02", dateValue)
 		if err != nil {
-			fmt.Printf("Error: Invalid date format '%s'. Use YYYY-MM-DD format.\n", dateValue)
+			fmt.Printf("\nError: Invalid date format '%s'. Use YYYY-MM-DD format.\n\n", dateValue)
 			return
 		}
 		
 		// Check if date is in the future
 		now := time.Now()
 		if targetDate.After(now) {
-			fmt.Printf("Error: Cannot mark habit as done for future date '%s'.\n", dateValue)
+			fmt.Printf("\nError: Cannot mark habit as done for future date '%s'.\n\n", dateValue)
 			return
 		}
 	}
@@ -380,7 +394,7 @@ func commandDone(args []string, df *DataFile) {
 	// Check if already completed on this date
 	for _, d := range targetHabit.DatesTracked {
 		if d == dateStr {
-			fmt.Printf("'%s' was already marked as done for %s.\n", targetHabit.Name, dateStr)
+			fmt.Printf("\n'%s' was already marked as done for %s.\n\n", targetHabit.Name, dateStr)
 			return
 		}
 	}
@@ -393,10 +407,11 @@ func commandDone(args []string, df *DataFile) {
 	
 	// Save updated data
 	if err := saveData(df); err != nil {
-		fmt.Println("Error saving data:", err)
+		fmt.Println("\nError saving data:", err, "\n")
 		return
 	}
 	
+	fmt.Println() // Add spacing before output
 	fmt.Printf("Marked '%s' as done for %s!\n", targetHabit.Name, dateStr)
 	
 	// Output streak info
@@ -404,20 +419,24 @@ func commandDone(args []string, df *DataFile) {
 	if currentStreak > 1 {
 		fmt.Printf("Current streak: %d days! 🔥\n", currentStreak)
 	}
+	
+	fmt.Println() // Add spacing after output
 }
 
 func commandDelete(args []string, df *DataFile) {
 	if len(args) == 0 {
-		fmt.Println("Error: Specify which habit to delete.")
-		fmt.Println("Usage: habits delete <index|name|short_name>")
+		fmt.Println("\nError: Specify which habit to delete.")
+		fmt.Println("Usage: habits delete <index|name|short_name>\n")
 		return
 	}
 	identifier := strings.Join(args, " ")
 	habit, index := findHabit(df, identifier)
 	if habit == nil {
-		fmt.Printf("Error: No habit found matching '%s'.\n", identifier)
+		fmt.Printf("\nError: No habit found matching '%s'.\n\n", identifier)
 		return
 	}
+	
+	fmt.Println() // Add spacing before prompting
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Printf("Are you sure you want to delete habit '%s'? (y/n): ", habit.Name)
 	resp, _ := reader.ReadString('\n')
@@ -430,14 +449,14 @@ func commandDelete(args []string, df *DataFile) {
 			if err := saveData(df); err != nil {
 				fmt.Println("Error saving data:", err)
 			} else {
-				fmt.Printf("Habit '%s' deleted.\n", habitName)
+				fmt.Printf("Habit '%s' deleted.\n\n", habitName)
 			}
 		} else {
 			// This should technically not happen if findHabit returned a non-nil habit
-			fmt.Println("Error: Could not delete habit due to index issue.")
+			fmt.Println("Error: Could not delete habit due to index issue.\n")
 		}
 	} else {
-		fmt.Println("Deletion canceled.")
+		fmt.Println("Deletion canceled.\n")
 	}
 }
 
