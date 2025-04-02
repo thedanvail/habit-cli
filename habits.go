@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,6 +18,80 @@ import (
 
 	"golang.org/x/term"
 )
+
+// Terminal color support variables
+var (
+	supportsColor bool
+	colorDone     string
+	colorCode1    string
+	colorCode2    string
+	colorCode3    string
+	colorEmpty    string
+	colorReset    string
+	boldText      string
+	italicText    string
+	accentText    string
+	resetText     string
+	clearScreen   string
+)
+
+// Initialize terminal capabilities based on OS
+func init() {
+	// Check if terminal supports colors
+	supportsColor = true
+	
+	// Windows Command Prompt doesn't support ANSI colors by default
+	// But Windows Terminal and PowerShell 5.1+ do support them
+	if runtime.GOOS == "windows" {
+		// Try to detect if we're in a capable terminal
+		// Simple check: CI environments and Windows Terminal/ConEmu often set these
+		_, hasColorTerm := os.LookupEnv("COLORTERM")
+		_, hasConEmuANSI := os.LookupEnv("ConEmuANSI")
+		_, hasWT_SESSION := os.LookupEnv("WT_SESSION")
+		_, hasTERM := os.LookupEnv("TERM")
+		
+		// If none of these are set, disable colors for Windows
+		if !hasColorTerm && !hasConEmuANSI && !hasWT_SESSION && !hasTERM {
+			supportsColor = false
+		}
+	}
+	
+	// Initialize colors based on support
+	if supportsColor {
+		colorDone = "\033[48;5;22m"  // Dark green for completed habits
+		colorCode1 = "\033[48;5;22m"  // Very dark green for 1 habit
+		colorCode2 = "\033[48;5;35m"  // Medium vibrant green for 2 habits
+		colorCode3 = "\033[48;5;118m" // Bright neon green for 3+ habits
+		colorEmpty = "\033[48;5;240m" // Grey for empty boxes
+		colorReset = "\033[0m"
+		boldText = "\033[1m"
+		italicText = "\033[3m"
+		accentText = "\033[36m"
+		resetText = "\033[0m"
+		clearScreen = "\033[H\033[2J"
+	} else {
+		// Fallback for terminals without color support
+		colorDone = ""
+		colorCode1 = ""
+		colorCode2 = ""
+		colorCode3 = ""
+		colorEmpty = ""
+		colorReset = ""
+		boldText = ""
+		italicText = ""
+		accentText = ""
+		resetText = ""
+		clearScreen = ""
+	}
+
+	// Initialize home directory and data file path
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Error determining home directory:", err)
+		os.Exit(1)
+	}
+	dataFilePath = filepath.Join(homeDir, ".habits_tracker.json")
+}
 
 type Habit struct {
 	Name         string                 `json:"name"`
@@ -30,15 +105,6 @@ type DataFile struct {
 }
 
 var dataFilePath string
-
-func init() {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println("Error determining home directory:", err)
-		os.Exit(1)
-	}
-	dataFilePath = filepath.Join(homeDir, ".habits_tracker.json")
-}
 
 func loadData() (*DataFile, error) {
 	df := &DataFile{}
@@ -179,7 +245,7 @@ func commandList(df *DataFile) {
 	}
 	
 	// Replace boxed header with a left-aligned title
-	fmt.Println("\033[1m📋 Your Habits\033[0m")
+	fmt.Printf("%s📋 Your Habits%s\n", boldText, resetText)
 	
 	// Pagination settings
 	const habitsPerPage = 10
@@ -208,7 +274,7 @@ func commandList(df *DataFile) {
 			
 			// Only show page info if there are multiple pages
 			if totalPages > 1 {
-				fmt.Printf("\n\033[1mPage %d of %d\033[0m", currentPage+1, totalPages)
+				fmt.Printf("\n%sPage %d of %d%s", boldText, currentPage+1, totalPages, resetText)
 			}
 			
 			// Just wait for Enter to continue or exit
@@ -220,8 +286,10 @@ func commandList(df *DataFile) {
 			}
 			
 			// Clear screen between pages for better readability
-			fmt.Print("\033[H\033[2J") // Clear screen
-			fmt.Println("\033[1m📋 Your Habits\033[0m")
+			if supportsColor {
+				fmt.Print(clearScreen) // Clear screen
+			}
+			fmt.Printf("%s📋 Your Habits%s\n", boldText, resetText)
 		}
 	}
 }
@@ -235,7 +303,7 @@ func displayHabitsPage(habits []Habit, startIdx, endIdx int) {
 	
 	for i := startIdx; i < endIdx; i++ {
 		h := habits[i]
-		fmt.Printf("  \033[1m%d.\033[0m %s (\033[3mshort: %s\033[0m)\n", i+1, h.Name, h.ShortName)
+		fmt.Printf("  %s%d.%s %s (%s%s%s)\n", boldText, i+1, resetText, h.Name, italicText, h.ShortName, resetText)
 	}
 }
 
@@ -381,12 +449,6 @@ func getTerminalWidth() int {
 
 // ANSI color codes (using 16-color background for better compatibility)
 const ( // Background colors
-	colorDone  = "\033[48;5;22m"  // Dark green for completed habits (same as single habit in aggregate)
-	colorCode1 = "\033[48;5;22m"  // Very dark green for 1 habit (aggregate view)
-	colorCode2 = "\033[48;5;35m"  // Medium vibrant green for 2 habits (aggregate view)
-	colorCode3 = "\033[48;5;118m" // Bright neon green for 3+ habits (aggregate view)
-	colorEmpty = "\033[48;5;240m" // Grey for empty boxes (days with 0 habits)
-	colorReset = "\033[0m"
 	squareChar     = "  " // Two spaces for the square content
 	squareSeparator = "  "  // Two spaces between squares
 	vertSeparator   = " " // Simple space separator for better alignment
@@ -584,11 +646,11 @@ func commandView(args []string, df *DataFile) {
 		return
 	}
 	
-	// Just draw once without waiting for Ctrl+C
-	// Clear screen and move cursor to top
-	fmt.Print("\033[H\033[2J")
-	
-	fmt.Printf("📊 \033[1mTracker: %s\033[0m (\033[3mshort: %s\033[0m)\n\n", habit.Name, habit.ShortName)
+	// Clear screen for better readability
+	if supportsColor {
+		fmt.Print(clearScreen)
+	}
+	fmt.Printf("📊 %sTracker: %s%s (%s%s%s)\n\n", boldText, habit.Name, resetText, italicText, habit.ShortName, resetText)
 	
 	// If day view, show the daily summary instead of grid
 	if viewRange == "day" {
@@ -716,11 +778,11 @@ func commandViewAggregate(df *DataFile, viewRange string) {
 		return
 	}
 	
-	// Just draw once without waiting for Ctrl+C
-	// Clear screen and move cursor to top
-	fmt.Print("\033[H\033[2J")
-	
-	fmt.Printf("📊 \033[1mTracker\033[0m\n\n")
+	// Clear screen for better readability
+	if supportsColor {
+		fmt.Print(clearScreen)
+	}
+	fmt.Printf("📊 %sTracker%s\n\n", boldText, resetText)
 
 	// Calculate daily completion counts for all habits
 	dailyCounts := make(map[string]int)
@@ -965,12 +1027,12 @@ func commandStats(args []string, df *DataFile) {
 		}
 	}
 	
-	// Header
+	// For a specific habit
 	if specificHabit != nil {
-		fmt.Printf("\033[1m📊 Statistics for '%s'\033[0m\n\n", specificHabit.Name)
+		fmt.Printf("%s📊 Statistics for '%s'%s\n\n", boldText, specificHabit.Name, resetText)
 	} else {
-		fmt.Println("\033[1m📊 Habit Statistics\033[0m")
-		fmt.Println()
+		// For all habits
+		fmt.Printf("%s📊 Habit Statistics%s\n", boldText, resetText)
 	}
 	
 	// If showing stats for a single habit
@@ -983,10 +1045,10 @@ func commandStats(args []string, df *DataFile) {
 		monthlyRate := calculateCompletionRate(dates, 30)
 		yearlyRate := calculateCompletionRate(dates, 365)
 		
-		fmt.Printf("  \033[1mCurrent Streak:\033[0m %d day(s)\n", currentStreak)
-		fmt.Printf("  \033[1mLongest Streak:\033[0m %d day(s)\n", longestStreak)
-		fmt.Printf("  \033[1mTotal Completions:\033[0m %d time(s)\n", len(dates))
-		fmt.Printf("  \033[1mCompletion Rate:\033[0m\n")
+		fmt.Printf("  %sCurrent Streak:%s %d day(s)\n", boldText, resetText, currentStreak)
+		fmt.Printf("  %sLongest Streak:%s %d day(s)\n", boldText, resetText, longestStreak)
+		fmt.Printf("  %sTotal Completions:%s %d time(s)\n", boldText, resetText, len(dates))
+		fmt.Printf("  %sCompletion Rate:%s\n", boldText, resetText)
 		fmt.Printf("    • Last 7 days: %.1f%% (%d of 7 days)\n", 
 			weeklyRate, int(weeklyRate * 7 / 100))
 		fmt.Printf("    • Last 30 days: %.1f%% (%d of 30 days)\n", 
@@ -1001,8 +1063,7 @@ func commandStats(args []string, df *DataFile) {
 	} else {
 		// Collect stats for all habits
 		fmt.Println()
-		fmt.Println("  \033[1mHabit Summary:\033[0m")
-		fmt.Println()
+		fmt.Printf("  %sHabit Summary:%s\n\n", boldText, resetText)
 		
 		// Remove the initial table header that causes duplication
 		
@@ -1084,7 +1145,7 @@ func commandStats(args []string, df *DataFile) {
 				fmt.Print("\033[H\033[2J") // Clear screen
 				fmt.Println("\033[1m📊 Habit Statistics\033[0m")
 				fmt.Println()
-				fmt.Println("  \033[1mHabit Summary:\033[0m")
+				fmt.Printf("  %sHabit Summary:%s\n\n", boldText, resetText)
 			}
 		}
 		
@@ -1484,54 +1545,43 @@ func commandRemove(args []string, df *DataFile) {
 }
 
 func printHelp() {
-	fmt.Println("Habits - Simple Habit Tracker")
-	fmt.Println("\033[1m🌟 Habits Tracker - Help\033[0m")
-	fmt.Println()
-	fmt.Println("Usage: \033[1mhabits\033[0m <command> [arguments...]")
-	fmt.Println("\n\033[1mCommands:\033[0m")
+	cmdWidth := 30 // Adjust command display width
+
+	fmt.Printf("%s🌟 Habits Tracker - Help%s\n", boldText, resetText)
 	
-	// Define shorter column width for better readability
-	cmdWidth := 25
+	fmt.Printf("Usage: %shabits%s <command> [arguments...]\n", boldText, resetText)
+	fmt.Printf("\n%sCommands:%s\n", boldText, resetText)
 	
-	// Basic commands
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "add \"<habit name>\"", "Add a new habit.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "list", "List all habits with index and short name.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "tracker [<id>]", "View habit tracker (aggregate if ID omitted).")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "tracker --range <range>", "View with range: year, month, week, day, last30.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "undone", "List all habits not completed today.")
+	// Basic commands - most commonly used
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "add \"<habit name>\"", resetText, "Add a new habit.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "list", resetText, "List all habits with index and short name.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "tracker [<id>]", resetText, "View habit tracker (aggregate if ID omitted).")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "tracker --range <range>", resetText, "View with range: year, month, week, day, last30.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "undone", resetText, "List all habits not completed today.")
 	
 	// Tracking commands
-	fmt.Println()
-	fmt.Println("\033[1mTracking Commands:\033[0m")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "done <id>", "Mark a habit as done for today.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "done <id> -date DATE", "Mark a habit as done for specific date.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "remove <id>", "Remove completion for today.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "remove <id> -date DATE", "Remove completion for specific date.")
+	fmt.Printf("\n%sTracking Commands:%s\n", boldText, resetText)
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "done <id>", resetText, "Mark a habit as done for today.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "done <id> -date DATE", resetText, "Mark a habit as done for specific date.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "remove <id>", resetText, "Remove completion for today.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "remove <id> -date DATE", resetText, "Remove completion for specific date.")
 	
 	// Management commands
-	fmt.Println()
-	fmt.Println("\033[1mManagement Commands:\033[0m")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "stats [<id>]", "Show statistics (all habits if id omitted).")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "edit <id> --name NAME", "Change a habit's name.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "edit <id> --short SHORT", "Change a habit's short name.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "delete <id>", "Delete a habit (asks for confirmation).")
+	fmt.Printf("\n%sManagement Commands:%s\n", boldText, resetText)
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "stats [<id>]", resetText, "Show statistics (all habits if id omitted).")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "edit <id> --name NAME", resetText, "Change a habit's name.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "edit <id> --short SHORT", resetText, "Change a habit's short name.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "delete <id>", resetText, "Delete a habit (asks for confirmation).")
 	
-	// Data commands
-	fmt.Println()
-	fmt.Println("\033[1mData Management:\033[0m")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "export [--file FILE]", "Export habits data to a file.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "import --file FILE", "Import habits from a file.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "import --file FILE --merge", "Import and merge with existing habits.")
-	fmt.Printf("  \033[36m%-*s\033[0m %s\n", cmdWidth, "help", "Show this help message.")
-
-	fmt.Println()
-	fmt.Println("\033[1mExamples:\033[0m")
-	fmt.Printf("  \033[32mhabits add \"Exercise Daily\"\033[0m\n")
-	fmt.Printf("  \033[32mhabits done 1 --date 2023-10-15\033[0m\n")
-	fmt.Printf("  \033[32mhabits remove 1 --date 2023-10-15\033[0m\n")
-	fmt.Printf("  \033[32mhabits undone\033[0m\n")
-	fmt.Printf("  \033[32mhabits tracker\033[0m  (view all habits)\n")
-	fmt.Printf("  \033[32mhabits tracker --range week\033[0m  (view this week)\n")
+	// Data management
+	fmt.Printf("\n%sData Management:%s\n", boldText, resetText)
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "export [--file FILE]", resetText, "Export habits data to a file.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "import --file FILE", resetText, "Import habits from a file.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "import --file FILE --merge", resetText, "Import and merge with existing habits.")
+	fmt.Printf("  %s%-*s%s %s\n", accentText, cmdWidth, "help", resetText, "Show this help message.")
+	
+	// Examples
+	fmt.Printf("\n%sExamples:%s\n", boldText, resetText)
 }
 
 // showTrackerWithoutClearing shows the tracker but doesn't clear the screen
@@ -1570,7 +1620,7 @@ func showTrackerWithoutClearing(args []string, df *DataFile) {
 	}
 	
 	// Title without clearing screen
-	fmt.Printf("\n📊 \033[1mTracker: %s\033[0m\n\n", habit.Name)
+	fmt.Printf("\n📊 %sTracker: %s%s\n\n", boldText, habit.Name, resetText)
 	
 	// If day view, show the daily summary instead of grid
 	if viewRange == "day" {
